@@ -1,0 +1,106 @@
+(define key
+  (lambda (w)
+    (cond ((null? w)
+      5387)
+    (else    
+      (+ (* 31 (key (cdr w))) (ctv (car w)))))))    
+
+(define gen-hash-division-method
+  (lambda (size)
+    (lambda (word)
+      (modulo (key word) size))))
+
+(define gen-hash-multiplication-method
+  (lambda (size)
+    (lambda (word)
+      (truncate (* size (- (* (key word) A)(truncate (* (key word) A))))))))
+;;runs a hash function on each member of a word list and returns a list of all the indexes
+(define hash
+  (lambda (dict hf bv)    
+    (cond ((eq? (cdr dict) '())
+      (append bv (list (hf (car dict)))))
+    (else
+      (cons (hf (car dict)) (hash (cdr dict) hf bv))))))
+;;puts each hash function in hashlist and runs it into hash function with the given dict
+(define parse
+  (lambda (hashlist dict bv)
+    (cond
+      ((eq? (cdr hashlist) '()) (append bv (hash dict (car hashlist) bv)))
+    (else
+      (append (hash dict (car hashlist) bv ) (parse (cdr hashlist) dict bv)))
+    )
+  )
+)
+;;runs each hash in hashlist on our word
+(define hashword
+  (lambda (hashlist word bv)
+    (cond
+      ((eq? (cdr hashlist) '()) (append bv (list ((car hashlist) word))))
+    (else
+      (cons ((car hashlist) word) (hashword (cdr hashlist) word bv)))
+    )
+   )
+ )
+;;creates a function that will compare x to num and if they're equal, will return y + 1
+;;y is our id from our reduce function
+(define numeqgen
+  (lambda (num)
+    (lambda (x y)
+      (define a
+        (cond
+          ((eq? x num) 1)
+        (else           
+           0
+        )))     
+      (+ a y)
+     )
+   )
+ )
+;;if all numbers in word index are in bitvector, return true
+;;take each number in word index and search for it in bitvector
+(define correct
+  (lambda (bitvector wordindex)
+    (define op (numeqgen (car wordindex)))
+    (cond
+      ((eq? (cdr wordindex) '()) (reduce op bitvector 0))
+    (else
+      (* (reduce op bitvector 0) (reduce op bitvector 0))))))
+
+(define gen-checker
+  (lambda (hashfunctionlist dict)
+    (define bitvector (parse hashfunctionlist dict '()))
+    (lambda (word)
+      ;;need to hash word with each hash function and check if each one is in bitvector
+      ;;define wordbv to be our list of indexes given by running each hash function on word
+      (define wordbv (hashword hashfunctionlist word '()))
+      ;;define sol to be our bit to indicate whether our word is spelt correctly or not
+      ;;spelt correctly means that each index from wordbv is in bitvector
+      (define sol (correct bitvector wordbv))
+      ;;convert sol to a boolean
+      (define bool (>= sol 1))
+      bool
+    )
+  )
+)
+
+(define hash-1 (gen-hash-division-method 70111))
+(define hash-2 (gen-hash-division-method 89997))
+(define hash-3 (gen-hash-multiplication-method 700224))
+(define hash-4 (gen-hash-multiplication-method 900))
+
+(define hashfl-1 (list hash-1 hash-2 hash-3 hash-4))
+(define hashfl-2 (list hash-1 hash-3))
+(define hashfl-3 (list hash-2 hash-3))
+
+(define checker-1 (gen-checker hashfl-1 dictionary))
+(define checker-2 (gen-checker hashfl-2 dictionary))
+(define checker-3 (gen-checker hashfl-3 dictionary))
+;;this function will hash eash word in the dictionary, and then check each word in the dictionary against it
+;;this function is just for checking if our program is correct
+(define check-all-words
+  (lambda (checker dictionary)
+    (cond ((null? dictionary) (display "done"))
+          ((eq? #f (checker (car dictionary))) (display "found error") (check-all-words checker (cdr dictionary)))
+          (else (check-all-words checker (cdr dictionary)))
+          )))
+
